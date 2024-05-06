@@ -4,6 +4,7 @@ import 'package:get/get_navigation/get_navigation.dart';
 import 'package:safe_connect/screens/LogsScreen/logsScreen.dart';
 import 'package:safe_connect/screens/QrInfoScreen/carinfo.dart';
 import 'package:safe_connect/screens/QrInfoScreen/childinfo.dart';
+import 'package:safe_connect/screens/QrInfoScreen/keyinfo.dart';
 import 'package:safe_connect/screens/QrInfoScreen/petinfo.dart';
 import 'package:safe_connect/screens/QrInfoScreen/qrwallpaperinfo.dart';
 import 'package:safe_connect/screens/QrRegistrationScreen/ChildRegistration.dart';
@@ -245,14 +246,19 @@ class newSecondChild extends StatelessWidget {
                       width: 20,
                     ),
                     Column(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage('assets/icons/key.png'),
-                              fit: BoxFit.fitWidth,
+                      children: <Widget>[
+                        InkWell(
+                          onTap: () {
+                            Get.to(() => keyQR());
+                          },
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: const BoxDecoration(
+                              image: DecorationImage(
+                                image: AssetImage('assets/icons/key.png'),
+                                fit: BoxFit.fitWidth,
+                              ),
                             ),
                           ),
                         ),
