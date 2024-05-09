@@ -119,7 +119,8 @@ class _QRGeneratorState extends State<QRGenerator> {
                       ),
                     ),
                     value: _selectedVehicleType,
-                    items: ['Car', 'Electric Car', 'Other'].map((String value) {
+                    items: ['Car', 'Electric Car', 'Other']
+                        .map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(
@@ -346,13 +347,12 @@ class _QRGeneratorState extends State<QRGenerator> {
                             child: Center(
                               child: Container(
                                 padding: const EdgeInsets.all(0.0),
-                                child: _qrCodeUrl != null
-                                    ? Image.network(
-                                        _qrCodeUrl!, // Use the stored URL
-                                        height: 120,
-                                        width: 120,
-                                      )
-                                    : SizedBox(),
+                                child: QrImageView(
+                                  data: _qrData,
+                                  version: QrVersions.auto,
+                                  size: 120.0,
+                                  backgroundColor: Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -388,7 +388,11 @@ class _QRGeneratorState extends State<QRGenerator> {
                                   ),
                                   backgroundColor: const Color(0xffFF3D3D),
                                 ),
-                                onPressed: _onDownloadQrPressed,
+                                onPressed: () async {
+                                  if (_qrData.isNotEmpty) {
+                                    await _saveQrImage();
+                                  }
+                                },
                                 child: const Text(
                                   'Click to download QR',
                                   style: TextStyle(
@@ -403,6 +407,12 @@ class _QRGeneratorState extends State<QRGenerator> {
                         height: 20,
                       ),
                       // Display QR Code Image from URL
+                      if (_qrCodeUrl != null)
+                        Image.network(
+                          _qrCodeUrl!, // Use the stored URL
+                          height: 120,
+                          width: 120,
+                        ),
                     ],
                   ),
               ],
@@ -694,12 +704,6 @@ class _QRGeneratorState extends State<QRGenerator> {
     _contactNoController.dispose();
     _emergencyContactNoController.dispose();
     super.dispose();
-  }
-
-  Future<void> _onDownloadQrPressed() async {
-    if (_qrData.isNotEmpty) {
-      await _saveQrImage();
-    }
   }
 
   bool _isValidEmailFormat(String email) {
