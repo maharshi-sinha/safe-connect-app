@@ -6,6 +6,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:safe_connect/bottomNavBar.dart';
 import 'package:safe_connect/screens/LoginScreen/loginScreen.dart';
+import 'package:safe_connect/screens/SearchVehicle/searchVehicle.dart';
 import 'package:shimmer/shimmer.dart';
 import 'QRDetailspage.dart';
 
@@ -106,6 +107,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
         actions: [
           IconButton(
             onPressed: () {
+              Get.to(() => VehicleDataPage());
+            },
+            icon: Icon(
+              Icons.search,
+              color: Colors.white,
+            ),
+          ),
+          IconButton(
+            onPressed: () {
               setState(() {
                 if (isEditMode) {
                   _updateUserData();
@@ -121,7 +131,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         ],
       ),
       body: SingleChildScrollView(
-         physics: NeverScrollableScrollPhysics(),
+        physics: NeverScrollableScrollPhysics(),
         child: Container(
           height: MediaQuery.of(context).size.height,
           padding: const EdgeInsets.all(16.0),
@@ -274,7 +284,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                   ),
                   style: TextButton.styleFrom(
-                    minimumSize: Size(50, 50), 
+                    minimumSize: Size(50, 50),
                     backgroundColor: Color(0xFFFFB13D),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(5),
@@ -310,7 +320,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       context,
       MaterialPageRoute(
         builder: (context) =>
-            QRDetailsPage(registeredQrDetails: registeredQrDetails),
+            QRDetailsPage(registeredQrDetails: registeredQrDetails, mobileNumber: mobileNumber,),
       ),
     );
   }

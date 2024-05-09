@@ -97,152 +97,166 @@ class _OtpScreenState extends State<OtpScreen> {
           color: Colors.white,
         ),
       ),
-      body: SingleChildScrollView(
-        child: Container(
-          height: MediaQuery.of(context).size.height,
-          width: MediaQuery.of(context).size.width,
-          color: Colors.black,
-          child: Column(
-            children: [
-              Stack(
-                children: [
-                  Container(
-                    height: MediaQuery.of(context).size.height * 0.6,
-                    width: MediaQuery.of(context).size.width,
-                    color: Colors.black,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20, left: 35),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: Container(
+                height: constraints.maxHeight,
+                width: constraints.maxWidth,
+                color: Colors.black,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      height: constraints.maxHeight * 0.6,
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: constraints.maxHeight * 0.6,
+                            width: constraints.maxWidth,
+                            color: Colors.black,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20, left: 35),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 10),
+                                const DefaultTextStyle(
+                                  style: TextStyle(
+                                    color: Color(0xFFFFB13D),
+                                    fontSize: 21,
+                                    fontFamily: "cirka",
+                                  ),
+                                  child: Text(
+                                    "Membership Application",
+                                  ),
+                                ),
+                                const SizedBox(
+                                  height: 10,
+                                ),
+                                DefaultTextStyle(
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontFamily: "gilroy",
+                                  ),
+                                  child: Text(
+                                    "Enter OTP sent to ${widget.mobileNumber}",
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: constraints.maxHeight *
+                                0.8, 
+                            child: OverflowBox(
+                              minHeight: constraints.maxHeight * 0.6,
+                              maxHeight: constraints.maxHeight * 0.6,
+                              child: Lottie.asset(
+                                'assets/images/carLottie.json',
+                                repeat: true,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 30,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        6,
+                        (index) => Container(
+                          width: 50,
+                          height: 50,
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Center(
+                            child: TextFormField(
+                              cursorColor: Colors.white,
+                              controller: _controllers[index],
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              maxLength: 1,
+                              onChanged: (value) {
+                                if (value.isNotEmpty) {
+                                  if (index < 5) {
+                                    FocusScope.of(context).nextFocus();
+                                  }
+                                } else {
+                                  if (index > 0) {
+                                    FocusScope.of(context).previousFocus();
+                                  }
+                                }
+                              },
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontFamily: "gilroy",
+                              ),
+                              decoration: const InputDecoration(
+                                counterText: '',
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 10),
-                        const DefaultTextStyle(
-                          style: TextStyle(
-                            color: Color(0xFFFFB13D),
-                            fontSize: 21,
-                            fontFamily: "cirka",
-                          ),
-                          child: Text(
-                            "Membership Application",
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        DefaultTextStyle(
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontFamily: "gilroy",
-                          ),
-                          child: Text(
-                            "Enter OTP sent to ${widget.mobileNumber}",
+                        Container(
+                          width: constraints.maxWidth / 2 - 50,
+                          height: 50,
+                          margin: const EdgeInsets.only(right: 5),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              String otp = _controllers.fold("",
+                                  (prev, controller) => prev + controller.text);
+                              _signInWithPhoneNumber(otp);
+                            },
+                            child: Text(
+                              "Verify",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 15,
+                                fontFamily: "gilroy",
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFFFFb13D),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  SizedBox(
-                    height: 570,
-                    child: OverflowBox(
-                      minHeight: 500,
-                      maxHeight: 500,
-                      child: Lottie.asset(
-                        'assets/images/carLottie.json',
-                        repeat: true,
-                      ),
-                    ),
-                  )
-                ],
-              ),
-              const SizedBox(
-                height: 30,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  6,
-                  (index) => Container(
-                    width: 50,
-                    height: 50,
-                    margin: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Center(
-                      child: TextFormField(
-                        cursorColor: Colors.white,
-                        controller: _controllers[index],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        onChanged: (value) {
-                          if (value.isNotEmpty) {
-                            if (index < 5) {
-                              FocusScope.of(context).nextFocus();
-                            }
-                          } else {
-                            if (index > 0) {
-                              FocusScope.of(context).previousFocus();
-                            }
-                          }
-                        },
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontFamily: "gilroy",
-                        ),
-                        decoration: const InputDecoration(
-                          counterText: '',
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(
-                height: 20,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: MediaQuery.of(context).size.width / 2 - 50,
-                    height: 50,
-                    margin: const EdgeInsets.only(right: 5),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        String otp = _controllers.fold(
-                            "", (prev, controller) => prev + controller.text);
-                        _signInWithPhoneNumber(otp);
-                      },
-                      child: Text(
-                        "Verify",
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 15,
-                          fontFamily: "gilroy",
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFFFb13D),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

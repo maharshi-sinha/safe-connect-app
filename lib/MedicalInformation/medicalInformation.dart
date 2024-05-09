@@ -1,7 +1,8 @@
+import 'dart:convert'; // Import the 'dart:convert' library
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:safe_connect/bottomNavBar.dart';
 import 'package:safe_connect/screens/HomeScreen/homeScreen.dart';
 import 'package:safe_connect/theme.dart';
@@ -24,6 +25,8 @@ class _MedicalInformationPageState extends State<MedicalInformationPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _bloodPressureController =
       TextEditingController();
+
+  String? jsonUrl; // URL of hosted JSON file
 
   @override
   void initState() {
@@ -308,13 +311,8 @@ class _MedicalInformationPageState extends State<MedicalInformationPage> {
                       final user = FirebaseAuth.instance.currentUser;
                       final mobileNumber = user!.phoneNumber;
 
-                      // Send medical information to Firestore
-                      await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(mobileNumber)
-                          .collection('medicalInformation')
-                          .doc(mobileNumber)
-                          .set({
+                      // Create a Map to store the medical information
+                      Map<String, dynamic> medicalInfo = {
                         'bloodType': _bloodType,
                         'bloodPressure': _bloodPressure,
                         'allergies': _allergies,
@@ -323,16 +321,48 @@ class _MedicalInformationPageState extends State<MedicalInformationPage> {
                         'medicalNotes': _medicalNotes,
                         'disease': _disease,
                         'immunizations': _immunizations,
+                      };
+
+                      // Convert the Map to JSON
+                      String jsonData = json.encode(medicalInfo);
+
+                      // Send medical information to Firestore
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(mobileNumber)
+                          .collection('medicalInformation')
+                          .doc(mobileNumber)
+                          .set(medicalInfo);
+
+                      // Save data to Firebase Storage
+                      final storageRef = FirebaseStorage.instance
+                          .ref()
+                          .child('registeredVehicles/$mobileNumber.json');
+                      await storageRef
+                          .putString(jsonData)
+                          .whenComplete(() => print('Data Uploaded'));
+
+                      // Retrieve the URL of the hosted JSON file
+                      String url = await storageRef.getDownloadURL();
+                      setState(() {
+                        jsonUrl = url; // Set the URL to the state
                       });
 
-                      // Show success dialog
+                      // Show success dialog with URL
                       showDialog(
                         context: context,
                         builder: (BuildContext context) {
                           return AlertDialog(
                             title: Text('Success'),
-                            content:
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text('Medical information saved successfully!'),
+                                SizedBox(height: 10),
+                                Text('URL: $url'), // Display URL
+                              ],
+                            ),
                             actions: [
                               TextButton(
                                 onPressed: () {

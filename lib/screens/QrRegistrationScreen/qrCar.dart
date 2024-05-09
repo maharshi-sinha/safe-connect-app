@@ -1,17 +1,15 @@
+import 'dart:convert';
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:safe_connect/bottomNavBar.dart';
-import 'package:safe_connect/screens/HomeScreen/homeScreen.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
 
 class QRGenerator extends StatefulWidget {
   const QRGenerator({Key? key}) : super(key: key);
@@ -32,6 +30,7 @@ class _QRGeneratorState extends State<QRGenerator> {
   String _qrData = '';
   bool _showQRData = false;
   String? _selectedVehicleType;
+  String? _qrCodeUrl; // Added to store the QR code URL
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +38,7 @@ class _QRGeneratorState extends State<QRGenerator> {
       appBar: AppBar(
         leading: IconButton(
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => bottomNavigationBar()),
-            );
+            Navigator.pop(context);
           },
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
         ),
@@ -123,8 +119,7 @@ class _QRGeneratorState extends State<QRGenerator> {
                       ),
                     ),
                     value: _selectedVehicleType,
-                    items: ['Two Wheeler', 'Four Wheeler', 'Other']
-                        .map((String value) {
+                    items: ['Car', 'Electric Car', 'Other'].map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(
@@ -351,12 +346,13 @@ class _QRGeneratorState extends State<QRGenerator> {
                             child: Center(
                               child: Container(
                                 padding: const EdgeInsets.all(0.0),
-                                child: QrImageView(
-                                  data: _qrData,
-                                  version: QrVersions.auto,
-                                  size: 120.0,
-                                  backgroundColor: Colors.white,
-                                ),
+                                child: _qrCodeUrl != null
+                                    ? Image.network(
+                                        _qrCodeUrl!, // Use the stored URL
+                                        height: 120,
+                                        width: 120,
+                                      )
+                                    : SizedBox(),
                               ),
                             ),
                           ),
@@ -392,11 +388,7 @@ class _QRGeneratorState extends State<QRGenerator> {
                                   ),
                                   backgroundColor: const Color(0xffFF3D3D),
                                 ),
-                                onPressed: () async {
-                                  if (_qrData.isNotEmpty) {
-                                    await _saveQrImage();
-                                  }
-                                },
+                                onPressed: _onDownloadQrPressed,
                                 child: const Text(
                                   'Click to download QR',
                                   style: TextStyle(
@@ -407,6 +399,10 @@ class _QRGeneratorState extends State<QRGenerator> {
                           ),
                         ],
                       ),
+                      SizedBox(
+                        height: 20,
+                      ),
+                      // Display QR Code Image from URL
                     ],
                   ),
               ],
@@ -421,6 +417,7 @@ class _QRGeneratorState extends State<QRGenerator> {
     if (_formKey.currentState!.validate()) {
       await _saveDataToFirestore(); // Save data to Firestore
       await _generateQRFromFirestoreData(); // Generate QR code from Firestore data
+      await _sendPostRequest(); // Send POST request
       setState(() {
         _showQRData = true; // Set _showQRData to true when QR data is generated
       });
@@ -469,8 +466,35 @@ class _QRGeneratorState extends State<QRGenerator> {
 
         setState(() {
           _qrData =
-              'Name: ${vehicleData['name']}, Vehicle Brand & Name: ${vehicleData['vehicleName']}, Vehicle No.: ${vehicleData['vehicleNumber']}, Email: ${vehicleData['email']}, Contact No.: ${vehicleData['contactNumber']}, Emergency Contact No.: ${vehicleData['emergencyContact']}, Blood Type: ${medicalData['bloodType']}, Blood Pressure: ${medicalData['bloodPressure']}, Allergies: ${medicalData['allergies']}, Medications: ${medicalData['medications']}, Organ Donor: ${medicalData['isOrganDonor']}, Medical Notes: ${medicalData['medicalNotes']}, Disease: ${medicalData['disease']}, Immunizations: ${medicalData['immunizations']}';
+              'Name: ${vehicleData['name']}, Vehicle Brand & Name: ${vehicleData['vehicleName']}, Vehicle No.: ${vehicleData['vehicleNumber']}, Email: ${vehicleData['email']}, Contact No.: ${vehicleData['contactNumber']}, Emergency Contact No.: ${vehicleData['emergencyContact']}, Blood Type: ${medicalData['bloodType']}, Blood Pressure: ${medicalData['bloodPressure']}, Allergies: ${medicalData['allergies']}, Medications: ${medicalData['medications']}, Organ Donor: ${medicalData['isOrganDonor']}, Medical Notes: ${medicalData['medicalNotes']}, Disease: ${medicalData['disease']}, Immunizations: ${medicalData['immunizations']}, QRCategory: Motor';
         });
+
+        // Save data to Firebase Storage in JSON format
+        final jsonData = {
+          'name': vehicleData['name'],
+          'vehicleName': vehicleData['vehicleName'],
+          'vehicleNumber': vehicleData['vehicleNumber'],
+          'email': vehicleData['email'],
+          'contactNumber': vehicleData['contactNumber'],
+          'emergencyContact': vehicleData['emergencyContact'],
+          'bloodType': medicalData['bloodType'],
+          'bloodPressure': medicalData['bloodPressure'],
+          'allergies': medicalData['allergies'],
+          'medications': medicalData['medications'],
+          'isOrganDonor': medicalData['isOrganDonor'],
+          'medicalNotes': medicalData['medicalNotes'],
+          'disease': medicalData['disease'],
+          'immunizations': medicalData['immunizations'],
+          'QRCategory': 'Motor',
+        };
+
+        final storageRef = firebase_storage.FirebaseStorage.instance
+            .ref()
+            .child('registeredVehicles')
+            .child(carNumber + '.json');
+
+        final jsonStr = json.encode(jsonData);
+        await storageRef.putString(jsonStr);
       }
     } catch (e) {
       print(e.toString());
@@ -548,15 +572,51 @@ class _QRGeneratorState extends State<QRGenerator> {
           'email': _emailController.text,
           'contactNumber': int.parse(_contactNoController.text),
           'emergencyContact': int.parse(_emergencyContactNoController.text),
+          'QRCategory': 'Motor',
         });
 
         setState(() {
           _qrData =
-              'Name: ${_nameController.text}, Vehicle Brand & Name: ${_vehicleNameController.text}, Vehicle No.: ${_vehicleNoController.text}, Vehicle Type: $vehicleTypeText, Email: ${_emailController.text}, Contact No.: ${_contactNoController.text}, Emergency Contact No.: ${_emergencyContactNoController.text}';
+              'Name: ${_nameController.text}, Vehicle Brand & Name: ${_vehicleNameController.text}, Vehicle No.: ${_vehicleNoController.text}, Vehicle Type: $vehicleTypeText, Email: ${_emailController.text}, Contact No.: ${_contactNoController.text}, Emergency Contact No.: ${_emergencyContactNoController.text}, QRCategory: Motor';
         });
       }
     } catch (e) {
       print(e.toString());
+    }
+  }
+
+  Future<void> _sendPostRequest() async {
+    try {
+      final url =
+          'https://safeconnect-e81248c2d86f.herokuapp.com/vehicle/post_vehicle_data';
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'owner_name': _nameController.text,
+          'vehicle_type': _selectedVehicleType,
+          'vehicle_brand': _vehicleNameController.text,
+          'vehicle_no': _vehicleNoController.text,
+          'email': _emailController.text,
+          'contact_number': _contactNoController.text,
+          'emergency_number': _emergencyContactNoController.text,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      print(responseData);
+
+      // Retrieve the QR code URL from the response body
+      final qrcodeUrl = responseData['data']['qrcode_url'];
+
+      setState(() {
+        _qrCodeUrl = qrcodeUrl; // Store the QR code URL
+      });
+    } catch (e) {
+      print('Error sending POST request: $e');
     }
   }
 
@@ -634,6 +694,12 @@ class _QRGeneratorState extends State<QRGenerator> {
     _contactNoController.dispose();
     _emergencyContactNoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _onDownloadQrPressed() async {
+    if (_qrData.isNotEmpty) {
+      await _saveQrImage();
+    }
   }
 
   bool _isValidEmailFormat(String email) {

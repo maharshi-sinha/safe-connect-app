@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:safe_connect/main.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -53,6 +52,7 @@ class LogScreenBody extends StatefulWidget {
 
 class _LogScreenBodyState extends State<LogScreenBody> {
   late StreamSubscription<QuerySnapshot> _streamSubscription;
+  late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
   @override
   void initState() {
@@ -64,11 +64,20 @@ class _LogScreenBodyState extends State<LogScreenBody> {
         .collection('logsForEmergencyContact')
         .snapshots()
         .listen((QuerySnapshot event) {
-      if (event.docChanges.isNotEmpty) {
-        // New document added, show notification
-        _showNotification();
-      }
+      event.docChanges.forEach((change) {
+        if (change.type == DocumentChangeType.added) {
+          // New document added, show notification
+          _showNotification();
+        }
+      });
     });
+
+    // Initialize notifications
+    flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+    _initNotifications();
+
+    // Fetch and print device token
+    _fetchAndPrintDeviceToken();
   }
 
   @override
@@ -77,15 +86,30 @@ class _LogScreenBodyState extends State<LogScreenBody> {
     super.dispose();
   }
 
+  // Function to initialize notifications
+  Future<void> _initNotifications() async {
+    final AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings,
+        onSelectNotification: (String? payload) async {
+      // Handle notification tap event
+      // Here you can cancel the notification
+      await flutterLocalNotificationsPlugin.cancel(0);
+      // You can add more logic if needed
+    });
+  }
+
   // Function to show notification
   Future<void> _showNotification() async {
-    print('//////////////////////////Showing notification ///////////////////////////////////////////////');
     try {
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
         'channel_ID',
         'channel name',
-        'channel description',
         playSound: true,
         sound: RawResourceAndroidNotificationSound('notification'),
         importance: Importance.max,
@@ -97,14 +121,38 @@ class _LogScreenBodyState extends State<LogScreenBody> {
         0,
         'New Notification',
         'Notification message',
-        RepeatInterval
-            .everyMinute, // Use RepeatInterval.minute for repeating every minute
+        RepeatInterval.everyMinute, // Use RepeatInterval.minute for repeating every minute
         platformChannelSpecifics,
         payload: 'New Notification', // Add payload if needed
       );
       print('Notification shown successfully');
     } catch (e) {
       print('Error showing notification: $e');
+    }
+  }
+
+  // Function to fetch and print device token
+  Future<void> _fetchAndPrintDeviceToken() async {
+    try {
+      final deviceTokenSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.phoneNumber)
+          .collection('deviceToken')
+          .doc(widget.phoneNumber)
+          .get();
+
+      if (deviceTokenSnapshot.exists) {
+        final deviceToken = deviceTokenSnapshot.data()?['token'];
+        if (deviceToken != null) {
+          print('Device token printed: $deviceToken');
+        } else {
+          print('Device token not found.');
+        }
+      } else {
+        print('Device token document does not exist.');
+      }
+    } catch (e) {
+      print('Error fetching device token: $e');
     }
   }
 

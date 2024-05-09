@@ -7,6 +7,7 @@ import 'package:safe_connect/BottomNavBar%20Features/helplinePopUp.dart';
 import 'package:safe_connect/BottomNavBar%20Features/soundRecorder.dart';
 import 'package:safe_connect/screens/HelpLogScreen/helpLogScreen.dart';
 import 'package:safe_connect/screens/HomeScreen/homeScreen.dart';
+import 'package:safe_connect/screens/QrScanner/qrScan.dart';
 import 'package:safe_connect/screens/QrScanner/qrScanner.dart';
 
 class bottomNavigationBar extends StatefulWidget {
@@ -77,7 +78,8 @@ class _bottomNavigationBarState extends State<bottomNavigationBar> {
       floatingActionButton: FloatingActionButton(
         shape: const CircleBorder(),
         onPressed: () {
-          Get.to(() => const QRCodeScanner());
+          // Get.to(() => const QRCodeScanner());
+          Get.to(() => const QRScanner());
         },
         child: const Icon(
           Icons.qr_code,

@@ -44,8 +44,8 @@ class _QRWallpaperState extends State<QRWallpaper> {
       appBar: AppBar(
         leading: IconButton(
           onPressed: () {
-            Navigator.pop(context,
-                MaterialPageRoute(builder: (context) => bottomNavigationBar()));
+            Navigator.pop(
+                context, MaterialPageRoute(builder: (context) => bottomNavigationBar()));
           },
           icon:
               const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
@@ -409,7 +409,7 @@ class _QRWallpaperState extends State<QRWallpaper> {
                                             child: Row(
                                               children: [
                                                 QrImageView(
-                                                  data: _qrData,
+                                                  data: '$_qrData\nQRCategory: Wallpaper',
                                                   version: QrVersions.auto,
                                                   size: 100,
                                                   backgroundColor:

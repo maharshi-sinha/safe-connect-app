@@ -50,30 +50,36 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Container(
-                height: MediaQuery.of(context).size.height,
-                width: MediaQuery.of(context).size.width,
-                color: Colors.black,
-                child: Column(
-                  children: [
-                    Stack(
+      backgroundColor: Colors.black, // Set background color to black
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: constraints.maxHeight * 0.6,
+                    child: Stack(
                       children: [
                         Container(
-                          height: MediaQuery.of(context).size.height * 0.6,
+                          height: constraints.maxHeight * 0.6,
                           width: MediaQuery.of(context).size.width,
                           color: Colors.black,
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(top: 130, left: 0),
+                          padding: EdgeInsets.only(
+                            top: constraints.maxHeight * 0.1,
+                            left: 0,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Padding(
-                                padding: EdgeInsets.only(left: 30),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 30),
                                 child: DefaultTextStyle(
                                   style: TextStyle(
                                     color: Color(0xffFFB13D),
@@ -102,10 +108,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               SizedBox(
-                                height: 400,
+                                height: constraints.maxHeight * 0.4,
                                 child: OverflowBox(
-                                  minHeight: 500,
-                                  maxHeight: 500,
+                                  minHeight: constraints.maxHeight * 0.4,
+                                  maxHeight: constraints.maxHeight * 0.4,
                                   child: Lottie.asset(
                                     'assets/images/carLottie.json',
                                     repeat: true,
@@ -117,131 +123,131 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(
-                      height: 20,
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Container(
+                    width: constraints.maxWidth * 0.9,
+                    child: TextFormField(
+                      cursorColor: Colors.white,
+                      controller: _mobileNumberController,
+                      maxLength: 10,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: "Mobile Number",
+                        labelStyle: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 15,
+                          fontFamily: "gilroy",
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        counterText: null,
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white),
+                        ),
+                      ),
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontFamily: "gilroy",
+                      ),
                     ),
-                    Container(
-                      width: MediaQuery.of(context).size.width - 45,
-                      child: TextFormField(
-                        cursorColor: Colors.white,
-                        controller: _mobileNumberController,
-                        maxLength: 10,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-                        ],
-                        decoration: InputDecoration(
-                          labelText: "Mobile Number",
-                          labelStyle: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 15,
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10.0),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: _isChecked,
+                          onChanged: (value) {
+                            setState(() {
+                              _isChecked = value!;
+                              _isButtonClicked = _isChecked;
+                            });
+                          },
+                          focusColor: Colors.white,
+                          activeColor: Colors.black,
+                        ),
+                        Text(
+                          'I agree to the terms and conditions',
+                          style: TextStyle(
+                            fontSize: 14,
                             fontFamily: "gilroy",
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          counterText: null,
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white),
+                            color: _isChecked
+                                ? Color(0xffFFB13D)
+                                : Colors.grey.withOpacity(0.5),
                           ),
                         ),
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(
-                          color: Colors.white,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Container(
+                    width: constraints.maxWidth * 0.9,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _isChecked
+                          ? () {
+                              if (_mobileNumberController.text.isNotEmpty) {
+                                _verifyPhoneNumber(
+                                    _mobileNumberController.text);
+                              }
+                            }
+                          : null,
+                      child: const Text(
+                        "Continue",
+                        style: TextStyle(
+                          color: Colors.black,
                           fontSize: 15,
                           fontFamily: "gilroy",
                         ),
                       ),
-                    ),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: _isChecked,
-                            onChanged: (value) {
-                              setState(() {
-                                _isChecked = value!;
-                                _isButtonClicked = _isChecked;
-                              });
-                            },
-                            focusColor: Colors.white,
-                            activeColor: Colors.black,
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.resolveWith(
+                          (states) {
+                            if (_isChecked &&
+                                !states.contains(MaterialState.disabled)) {
+                              return Color(0xffFFB13D);
+                            }
+                            return Colors.grey.withOpacity(
+                                0.5); // Changed to blue when checkbox is not checked
+                          },
+                        ),
+                        shape:
+                            MaterialStateProperty.all<RoundedRectangleBorder>(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5),
                           ),
-                          Text(
-                            'I agree to the terms and conditions',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontFamily: "gilroy",
-                              color: _isChecked
-                                  ? Color(0xffFFB13D)
-                                  : Colors.grey.withOpacity(0.5),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                    const SizedBox(
-                      height: 20,
-                    ),
+                  ),
+                  if (_isLoading)
                     Container(
-                      width: MediaQuery.of(context).size.width - 45,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _isChecked
-                            ? () {
-                                if (_mobileNumberController.text.isNotEmpty) {
-                                  _verifyPhoneNumber(
-                                      _mobileNumberController.text);
-                                }
-                              }
-                            : null,
-                        child: const Text(
-                          "Continue",
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 15,
-                            fontFamily: "gilroy",
-                          ),
-                        ),
-                        style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.resolveWith(
-                            (states) {
-                              if (_isChecked &&
-                                  !states.contains(MaterialState.disabled)) {
-                                return Color(0xffFFB13D);
-                              }
-                              return Colors.grey.withOpacity(
-                                  0.5); // Changed to blue when checkbox is not checked
-                            },
-                          ),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
+                      height: constraints.maxHeight * 0.4,
+                      color: Colors.transparent,
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-          ),
-          if (_isLoading)
-            Container(
-              height: MediaQuery.of(context).size.height * 0.4,
-              color: Colors.transparent,
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                ),
-              ),
-            ),
-        ],
+          );
+        },
       ),
     );
   }

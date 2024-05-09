@@ -5,6 +5,8 @@
 <uses-feature android:name="android.hardware.camera.autofocus" />
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+<uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
 
     <application
@@ -40,17 +42,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <receiver android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
-          android:enabled="true"
-          android:exported="true">
-    <intent-filter>
-        <action android:name="android.intent.action.BOOT_COMPLETED"/>
-        <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
-        <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
-        <action android:name="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE"/>
-        <action android:name="android.intent.action.EXTERNAL_APPLICATIONS_UNAVAILABLE"/>
-    </intent-filter>
-</receiver>
 
     </application>
 </manifest>
