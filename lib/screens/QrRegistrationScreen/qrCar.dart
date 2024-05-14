@@ -28,9 +28,11 @@ class _QRGeneratorState extends State<QRGenerator> {
   final TextEditingController _emergencyContactNoController =
       TextEditingController();
   String _qrData = '';
+
   bool _showQRData = false;
   String? _selectedVehicleType;
-  String? _qrCodeUrl; // Added to store the QR code URL
+  String? _qrCodeUrl;
+  bool _loading = false; 
 
   @override
   Widget build(BuildContext context) {
@@ -119,8 +121,7 @@ class _QRGeneratorState extends State<QRGenerator> {
                       ),
                     ),
                     value: _selectedVehicleType,
-                    items: ['Car', 'Electric Car', 'Other']
-                        .map((String value) {
+                    items: ['Car', 'Electric Car', 'Other'].map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(
@@ -330,12 +331,17 @@ class _QRGeneratorState extends State<QRGenerator> {
                     child: const Text(
                       'Generate QR Code',
                       style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 14,
-                          fontFamily: 'gilroy'),
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontFamily: 'gilroy',
+                      ),
                     ),
                   ),
                 ),
+                if (_loading) // Show circular progress indicator
+                  Center(
+                    child: CircularProgressIndicator(),
+                  ),
                 if (_showQRData)
                   Column(
                     children: [
@@ -347,12 +353,13 @@ class _QRGeneratorState extends State<QRGenerator> {
                             child: Center(
                               child: Container(
                                 padding: const EdgeInsets.all(0.0),
-                                child: QrImageView(
-                                  data: _qrData,
-                                  version: QrVersions.auto,
-                                  size: 120.0,
-                                  backgroundColor: Colors.white,
-                                ),
+                                child: _qrCodeUrl != null
+                                    ? Image.network(
+                                        _qrCodeUrl!,
+                                        height: 120,
+                                        width: 120,
+                                      )
+                                    : SizedBox(),
                               ),
                             ),
                           ),
@@ -388,15 +395,13 @@ class _QRGeneratorState extends State<QRGenerator> {
                                   ),
                                   backgroundColor: const Color(0xffFF3D3D),
                                 ),
-                                onPressed: () async {
-                                  if (_qrData.isNotEmpty) {
-                                    await _saveQrImage();
-                                  }
-                                },
+                                onPressed: _onDownloadQrPressed,
                                 child: const Text(
                                   'Click to download QR',
                                   style: TextStyle(
-                                      color: Colors.white, fontSize: 16),
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
                                 ),
                               ),
                             ),
@@ -406,13 +411,6 @@ class _QRGeneratorState extends State<QRGenerator> {
                       SizedBox(
                         height: 20,
                       ),
-                      // Display QR Code Image from URL
-                      if (_qrCodeUrl != null)
-                        Image.network(
-                          _qrCodeUrl!, // Use the stored URL
-                          height: 120,
-                          width: 120,
-                        ),
                     ],
                   ),
               ],
@@ -423,35 +421,53 @@ class _QRGeneratorState extends State<QRGenerator> {
     );
   }
 
-  Future<void> _onGenerateQRPressed() async {
-    if (_formKey.currentState!.validate()) {
-      await _saveDataToFirestore(); // Save data to Firestore
-      await _generateQRFromFirestoreData(); // Generate QR code from Firestore data
-      await _sendPostRequest(); // Send POST request
-      setState(() {
-        _showQRData = true; // Set _showQRData to true when QR data is generated
-      });
-    } else {
-      // Show alert
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text("Form Error"),
-            content: const Text("Please fill the form correctly."),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          );
-        },
-      );
-    }
+ Future<void> _onGenerateQRPressed() async {
+  setState(() {
+    _loading = true; // Show circular progress indicator
+  });
+
+  if (_formKey.currentState!.validate()) {
+    await _saveDataToFirestore();
+    await _generateQRFromFirestoreData();
+    await _sendPostRequest();
+    setState(() {
+      _showQRData = true;
+      _loading = false; // Hide circular progress indicator after QR is generated
+    });
+
+    // Show snackbar message and scroll down
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('QR Code generated successfully. Scroll down to download QR.'),
+      ),
+    );
+    
+
+  } else {
+    setState(() {
+      _loading = false; // Hide circular progress indicator if form validation fails
+    });
+    // Show alert
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Form Error"),
+          content: const Text("Please fill the form correctly."),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
   }
+}
+
 
   Future<void> _generateQRFromFirestoreData() async {
     try {
@@ -616,15 +632,30 @@ class _QRGeneratorState extends State<QRGenerator> {
         }),
       );
 
-      final responseData = jsonDecode(response.body);
-      print(responseData);
+      // Print the status code
+      print('Status Code: ${response.statusCode}');
 
-      // Retrieve the QR code URL from the response body
-      final qrcodeUrl = responseData['data']['qrcode_url'];
+      if (response.statusCode == 201) {
+        // Data sent to Firebase Firestore only if status code is 201
+        print('Data sent to Firebase successfully');
 
-      setState(() {
-        _qrCodeUrl = qrcodeUrl; // Store the QR code URL
-      });
+        // Parse the response body
+        final responseData = jsonDecode(response.body);
+        print('Response Data: $responseData');
+
+        // Retrieve the QR code URL from the response body
+        final qrcodeUrl = responseData['data']['qrcode_url'];
+
+        setState(() {
+          _qrCodeUrl = qrcodeUrl; // Store the QR code URL
+        });
+
+        // Proceed to save data to Firestore
+        await _saveDataToFirestore();
+      } else {
+        // Data not sent to Firestore if status code is not 201
+        print('Data not sent to Firebase. Status code: ${response.statusCode}');
+      }
     } catch (e) {
       print('Error sending POST request: $e');
     }
@@ -704,6 +735,12 @@ class _QRGeneratorState extends State<QRGenerator> {
     _contactNoController.dispose();
     _emergencyContactNoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _onDownloadQrPressed() async {
+    if (_qrData.isNotEmpty) {
+      await _saveQrImage();
+    }
   }
 
   bool _isValidEmailFormat(String email) {
