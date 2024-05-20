@@ -32,7 +32,8 @@ class _QRGeneratorState extends State<QRGenerator> {
   bool _showQRData = false;
   String? _selectedVehicleType;
   String? _qrCodeUrl;
-  bool _loading = false; 
+  bool _loading = false;
+  bool _isQrCodeAvailable = false;
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +343,7 @@ class _QRGeneratorState extends State<QRGenerator> {
                   Center(
                     child: CircularProgressIndicator(),
                   ),
-                if (_showQRData)
+                if (_isQrCodeAvailable)
                   Column(
                     children: [
                       const SizedBox(height: 20.0),
@@ -421,53 +422,55 @@ class _QRGeneratorState extends State<QRGenerator> {
     );
   }
 
- Future<void> _onGenerateQRPressed() async {
-  setState(() {
-    _loading = true; // Show circular progress indicator
-  });
-
-  if (_formKey.currentState!.validate()) {
-    await _saveDataToFirestore();
-    await _generateQRFromFirestoreData();
-    await _sendPostRequest();
+  Future<void> _onGenerateQRPressed() async {
     setState(() {
-      _showQRData = true;
-      _loading = false; // Hide circular progress indicator after QR is generated
+      _loading = true; // Show circular progress indicator
     });
 
-    // Show snackbar message and scroll down
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('QR Code generated successfully. Scroll down to download QR.'),
-      ),
-    );
-    
+    if (_formKey.currentState!.validate()) {
+      await _saveDataToFirestore();
+      await _generateQRFromFirestoreData();
+      await _sendPostRequest();
+      setState(() {
+        _showQRData = true;
+        _loading =
+            false; // Hide circular progress indicator after QR is generated
+      });
 
-  } else {
-    setState(() {
-      _loading = false; // Hide circular progress indicator if form validation fails
-    });
-    // Show alert
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Form Error"),
-          content: const Text("Please fill the form correctly."),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("OK"),
-            ),
-          ],
+      // Show snackbar message and scroll down
+      if (_qrCodeUrl != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'QR Code generated successfully. Scroll down to download QR.'),
+          ),
         );
-      },
-    );
+      }
+    } else {
+      setState(() {
+        _loading =
+            false; // Hide circular progress indicator if form validation fails
+      });
+      // Show alert
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Form Error"),
+            content: const Text("Please fill the form correctly."),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
-}
-
 
   Future<void> _generateQRFromFirestoreData() async {
     try {
@@ -541,24 +544,7 @@ class _QRGeneratorState extends State<QRGenerator> {
 
       if (existingDoc.exists) {
         // Vehicle is already registered
-        // ignore: use_build_context_synchronously
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text("Vehicle Already Registered"),
-              content: const Text("This vehicle is already registered."),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text("OK"),
-                ),
-              ],
-            );
-          },
-        );
+        return;
       } else {
         // Convert dropdown value to text
         String vehicleTypeText = '';
@@ -612,54 +598,74 @@ class _QRGeneratorState extends State<QRGenerator> {
   }
 
   Future<void> _sendPostRequest() async {
-    try {
-      final url =
-          'https://safeconnect-e81248c2d86f.herokuapp.com/vehicle/post_vehicle_data';
+  setState(() {
+    _loading = true;
+  });
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(<String, dynamic>{
-          'owner_name': _nameController.text,
-          'vehicle_type': _selectedVehicleType,
-          'vehicle_brand': _vehicleNameController.text,
-          'vehicle_no': _vehicleNoController.text,
-          'email': _emailController.text,
-          'contact_number': _contactNoController.text,
-          'emergency_number': _emergencyContactNoController.text,
-        }),
+  try {
+    final url =
+        'https://safeconnect-e81248c2d86f.herokuapp.com/vehicle/post_vehicle_data';
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, dynamic>{
+        'owner_name': _nameController.text,
+        'vehicle_type': _selectedVehicleType,
+        'vehicle_brand': _vehicleNameController.text,
+        'vehicle_no': _vehicleNoController.text,
+        'email': _emailController.text,
+        'contact_number': _contactNoController.text,
+        'emergency_number': _emergencyContactNoController.text,
+      }),
+    );
+
+    print('Status Code: ${response.statusCode}');
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      print('Data sent to Firebase successfully');
+
+      final responseData = jsonDecode(response.body);
+      print('Response Data: $responseData');
+
+      final qrcodeUrl = responseData['data']['qrcode_url'];
+
+      setState(() {
+        _qrCodeUrl = qrcodeUrl; // Store the QR code URL
+        _isQrCodeAvailable = true; // Indicate QR code is available
+      });
+
+      await _saveDataToFirestore();
+    } else {
+      setState(() {
+        _isQrCodeAvailable = false; // Indicate QR code is not available
+      });
+      print('Data not sent to Firebase. Status code: ${response.statusCode}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to generate QR code. Please try again.'),
+        ),
       );
-
-      // Print the status code
-      print('Status Code: ${response.statusCode}');
-
-      if (response.statusCode == 201) {
-        // Data sent to Firebase Firestore only if status code is 201
-        print('Data sent to Firebase successfully');
-
-        // Parse the response body
-        final responseData = jsonDecode(response.body);
-        print('Response Data: $responseData');
-
-        // Retrieve the QR code URL from the response body
-        final qrcodeUrl = responseData['data']['qrcode_url'];
-
-        setState(() {
-          _qrCodeUrl = qrcodeUrl; // Store the QR code URL
-        });
-
-        // Proceed to save data to Firestore
-        await _saveDataToFirestore();
-      } else {
-        // Data not sent to Firestore if status code is not 201
-        print('Data not sent to Firebase. Status code: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error sending POST request: $e');
     }
+  } catch (e) {
+    setState(() {
+      _isQrCodeAvailable = false; // Indicate QR code is not available
+      _loading = false;
+    });
+    print('Error sending POST request: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+      ),
+    );
+  } finally {
+    setState(() {
+      _loading = false;
+    });
   }
+}
 
   Future<void> _saveQrImage() async {
     try {

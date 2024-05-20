@@ -69,13 +69,30 @@ class _VehicleDataPageState extends State<VehicleDataPage> {
                 if (vehicleNumber.isNotEmpty) {
                   try {
                     final data = await _fetchVehicleData(vehicleNumber);
-                    // Navigate to the next screen to display data
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => VehicleDataScreen(data),
-                      ),
-                    );
+                    if (data['Data'] != null && data['Data'].isNotEmpty) {
+                      // Navigate to the next screen to display data
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => VehicleDataScreen(data),
+                        ),
+                      );
+                    } else {
+                      // Show no data available dialog
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('No Data'),
+                          content: Text('No data available for the vehicle number: $vehicleNumber'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
                   } catch (e) {
                     // Show error dialog
                     showDialog(
